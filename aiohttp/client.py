@@ -235,7 +235,7 @@ class ClientSession:
             ), "Only absolute URLs without path part are supported"
 
         if connector is None:
-            connector = TCPConnector(loop=loop)
+            connector = TCPConnector(loop=loop, enable_cleanup_closed=True)
 
         if connector._loop is not loop:
             raise RuntimeError("Session and connector has to use same event loop")
