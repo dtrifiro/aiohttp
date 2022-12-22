@@ -114,6 +114,7 @@ class StreamWriter(AbstractStreamWriter):
                 chunk = chunk_len_pre + chunk + b"\r\n"
 
             self._write(chunk)
+            self.protocol._reschedule_timeout()
 
             if self.buffer_size > LIMIT and drain:
                 self.buffer_size = 0
