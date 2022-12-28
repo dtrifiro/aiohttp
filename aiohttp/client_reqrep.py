@@ -525,6 +525,7 @@ class ClientRequest:
 
         protocol = conn.protocol
         assert protocol is not None
+        protocol.drop_timeout()
         try:
             if isinstance(self.body, payload.Payload):
                 await self.body.write(writer)
@@ -551,6 +552,8 @@ class ClientRequest:
                 protocol.set_exception(exc)
         except Exception as exc:
             protocol.set_exception(exc)
+        else:
+            protocol.start_timeout()
         finally:
             self._writer = None
 

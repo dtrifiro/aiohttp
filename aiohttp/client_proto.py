@@ -67,13 +67,13 @@ class ResponseHandler(BaseProtocol, DataQueue[Tuple[RawResponseMessage, StreamRe
             transport.close()
             self.transport = None
             self._payload = None
-            self._drop_timeout()
+            self.drop_timeout()
 
     def is_connected(self) -> bool:
         return self.transport is not None and not self.transport.is_closing()
 
     def connection_lost(self, exc: Optional[BaseException]) -> None:
-        self._drop_timeout()
+        self.drop_timeout()
 
         if exc is not None:
             set_exception(self.closed, exc)
@@ -113,19 +113,19 @@ class ResponseHandler(BaseProtocol, DataQueue[Tuple[RawResponseMessage, StreamRe
 
     def eof_received(self) -> None:
         # should call parser.feed_eof() most likely
-        self._drop_timeout()
+        self.drop_timeout()
 
     def pause_reading(self) -> None:
         super().pause_reading()
-        self._drop_timeout()
+        self.drop_timeout()
 
     def resume_reading(self) -> None:
         super().resume_reading()
-        self._reschedule_timeout()
+        self.reschedule_timeout()
 
     def set_exception(self, exc: BaseException) -> None:
         self._should_close = True
-        self._drop_timeout()
+        self.drop_timeout()
         super().set_exception(exc)
 
     def set_parser(self, parser: Any, payload: Any) -> None:
@@ -137,7 +137,7 @@ class ResponseHandler(BaseProtocol, DataQueue[Tuple[RawResponseMessage, StreamRe
         self._payload = payload
         self._payload_parser = parser
 
-        self._drop_timeout()
+        self.drop_timeout()
 
         if self._tail:
             data, self._tail = self._tail, b""
@@ -157,7 +157,7 @@ class ResponseHandler(BaseProtocol, DataQueue[Tuple[RawResponseMessage, StreamRe
         self._skip_payload = skip_payload
 
         self._read_timeout = read_timeout
-        self._reschedule_timeout()
+        self.reschedule_timeout()
 
         self._timeout_ceil_threshold = timeout_ceil_threshold
 
@@ -176,12 +176,12 @@ class ResponseHandler(BaseProtocol, DataQueue[Tuple[RawResponseMessage, StreamRe
             data, self._tail = self._tail, b""
             self.data_received(data)
 
-    def _drop_timeout(self) -> None:
+    def drop_timeout(self) -> None:
         if self._read_timeout_handle is not None:
             self._read_timeout_handle.cancel()
             self._read_timeout_handle = None
 
-    def _reschedule_timeout(self) -> None:
+    def reschedule_timeout(self) -> None:
         timeout = self._read_timeout
         if self._read_timeout_handle is not None:
             self._read_timeout_handle.cancel()
@@ -200,7 +200,7 @@ class ResponseHandler(BaseProtocol, DataQueue[Tuple[RawResponseMessage, StreamRe
             self._payload.set_exception(exc)
 
     def data_received(self, data: bytes) -> None:
-        self._reschedule_timeout()
+        self.reschedule_timeout()
 
         if not data:
             return
@@ -252,9 +252,9 @@ class ResponseHandler(BaseProtocol, DataQueue[Tuple[RawResponseMessage, StreamRe
                     # either on end-of-stream or immediately for
                     # EMPTY_PAYLOAD
                     if payload is not EMPTY_PAYLOAD:
-                        payload.on_eof(self._drop_timeout)
+                        payload.on_eof(self.drop_timeout)
                     else:
-                        self._drop_timeout()
+                        self.drop_timeout()
 
                 if tail:
                     if upgraded:

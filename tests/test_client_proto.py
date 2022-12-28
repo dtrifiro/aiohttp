@@ -116,7 +116,7 @@ async def test_drop_timeout(loop: Any) -> None:
     proto = ResponseHandler(loop=loop)
     proto.set_response_params(read_timeout=1)
     assert proto._read_timeout_handle is not None
-    proto._drop_timeout()
+    proto.drop_timeout()
     assert proto._read_timeout_handle is None
 
 
@@ -125,7 +125,7 @@ async def test_reschedule_timeout(loop: Any) -> None:
     proto.set_response_params(read_timeout=1)
     assert proto._read_timeout_handle is not None
     h = proto._read_timeout_handle
-    proto._reschedule_timeout()
+    proto.reschedule_timeout()
     assert proto._read_timeout_handle is not None
     assert proto._read_timeout_handle is not h
 
