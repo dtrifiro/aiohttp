@@ -673,6 +673,47 @@ async def test_read_timeout_on_reading_chunks(aiohttp_client: Any, mocker: Any) 
             await resp.content.read()
 
 
+async def test_read_timeout_on_sending_chunks(aiohttp_client: Any) -> None:
+    sock_read_timeout = 0.1
+    payload_size = 10 * 2**20  # 10MB
+    chunk_size = 0x1000  # 4k
+    n_chunks = payload_size / chunk_size
+    # sleep for a time that is larger than sock_read_timeout (in total)
+    sleep_for = 10 * sock_read_timeout / n_chunks
+
+    async def gen_chunks(payload_size: int, chunk_size: int = chunk_size):
+        processed = 0
+        while processed < payload_size:
+            if (processed + chunk_size) > payload_size:
+                # final chunk
+                chunk_size = payload_size - processed
+            yield b"Z" * chunk_size
+
+            await asyncio.sleep(sleep_for)  # simulate delay
+
+            processed += chunk_size
+
+    async def handler(request):
+        async def read_all_chunks(request):
+            read_data = 0
+            async for data, end_of_http_chunk in request.content.iter_chunks():
+                read_data += len(data)
+            return read_data
+
+        read_data = await read_all_chunks(request)
+        return web.Response(text=f"{read_data}")
+
+    app = web.Application()
+    app.router.add_put("/", handler)
+    client = await aiohttp_client(app)
+
+    timeout = aiohttp.ClientTimeout(total=None, sock_read=sock_read_timeout)
+    resp = await client.put("/", data=gen_chunks(payload_size), timeout=timeout)
+    txt = await resp.text()
+    assert txt == f"{payload_size}"
+    resp.close()
+
+
 async def test_timeout_on_reading_data(aiohttp_client: Any, mocker: Any) -> None:
     loop = asyncio.get_event_loop()
 
